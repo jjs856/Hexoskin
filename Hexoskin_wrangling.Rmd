@@ -179,3 +179,8 @@ hxd <- subset(hxd, hr >= 50)
 
 write_csv(hxd, "hexo_data_analysis.csv")
 ```
+
+Jobs
+Find maximum recorded heart rate for each participant
+calc max for each participant
+
