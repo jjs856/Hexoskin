@@ -183,8 +183,9 @@ write_csv(hxd, "hexo_data_analysis.csv")
 Max HR by participant
 
 ```{r}
-hexodata <- group_by(
-  describe.by(hexodata$hr))
+hexodata_vo2 <- hexodata %>%
+  group_by(participants)
+  describe.by(hexodata$hr)
 ```
 
 
