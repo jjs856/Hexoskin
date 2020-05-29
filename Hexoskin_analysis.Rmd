@@ -1,0 +1,212 @@
+---
+title: "Hexoskin"
+author: "Jonathan Slaney"
+date: "03/10/2019"
+output: html_document
+---
+
+## Necessary packages
+
+```{r}
+library(knitr)
+library(tidyverse)
+library(tidymodels)
+library(ggmap)
+library(lubridate)
+library(readr)
+library(psych)
+library(ggpubr)
+library(ggpmisc)
+library(effsize)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Looping over data and creating city and participant columns
+
+```{r}
+hxd <- read_csv("/Users/dfuller/Desktop/DatasetsHexoskin/hexo_data_analysis.csv")
+
+### Descriptives (for heart rate, breathing) psych package describe function
+```
+
+```{r}
+describe(hxd$hr)
+
+ggplot(hxd, aes(hr)) + 
+    geom_histogram()
+```
+
+```{r}
+describe(hxd$ve_L)
+
+ggplot(hxd, aes(ve_L)) + 
+    geom_histogram()
+```
+
+### Descriptives for Participants and Cities
+
+```{r}
+table(hxd$participants)
+
+table(hxd$city)
+
+table(hxd$city, hxd$participants)
+```
+
+### Histograms by city 
+
+```{r}
+ggplot(hxd, aes(hr)) +
+  geom_histogram(aes(y = ..density..), fill = "cornflowerblue", colour = "black", size = 0.4) +
+  geom_density(aes(y = ..density..), colour = "darkred", size = 1) + 
+  ylab("HR density") + 
+  xlab("Heart rate (bpm)") + 
+   ggtitle("HR by city") + 
+   facet_wrap(~ city)
+```
+
+### Histograms by city for Ve
+
+```{r}
+ggplot(hxd, aes(ve_L)) +
+  geom_histogram(aes(y = ..density..), fill = "cornflowerblue", colour = "black", size = 0.4) +
+  geom_density(aes(y = ..density..), colour = "darkred", size = 1) + 
+  ylab("Density") + 
+  xlab("Ve (L/min)") + 
+   ggtitle("Ve by city") + 
+   facet_wrap(~ city)
+```
+
+### Histogram of all data
+
+```{r}
+ggplot(hxd, aes(hr)) +
+  geom_histogram(aes(y = ..density..), fill = "cornflowerblue", colour = "black", size = 0.4) +
+  geom_density(aes(y = ..density..), colour = "darkred", size = 1) + 
+  ylab("HR density") + 
+  xlab("Heart rate (bpm)")
+```
+
+### Linear regressions by participant
+
+### scatterplot for predictor and outcome
+
+```{r}
+cor_bar <- ggplot(hxd, aes(x = hr, y = ve_L)) + 
+                  geom_point(size = 0.05) + 
+  geom_smooth(method='lm', formula = y ~ x) + 
+   facet_wrap(~ city)
+plot(cor_bar)
+```
+
+### Calculate R^2
+
+### Fit linear regression to participants
+
+```{r}
+cor_hexo_all <- ggplot(hxd, aes(x = hr, y = ve_L)) + 
+                  geom_point(size = 0.1) + 
+   geom_smooth(method='lm', formula = y ~ x) + 
+   facet_wrap(~ participants)
+plot(cor_hexo_all)
+```
+
+Here VJ is strange. Appears to have two distinct lines. Might indicates that this is two participants mixed? 
+
+### Fit linear regression to all data
+
+### Simple linear regression for hr and Ve
+
+```{r}
+lm_hr_ve <- lm(ve_L ~ hr, data = hxd)
+summary(lm_hr_ve)
+fit_m1 <- glance(lm_hr_ve)
+hxd$lm_fitted <- predict(lm_hr_ve)
+
+ggplot(hxd, aes(x = hr, y = ve_L)) + 
+   geom_point(size = 1, alpha = 0.05) + 
+   geom_line(aes(y = lm_fitted), size = 1, colour = "red") +
+   xlab("Cycling Intensity (bpm)") + 
+   ylab("Breathing Volume (L/minute)")
+```
+
+### Simple linear regression for hr and Ve with VE squared
+
+```{r}
+lm_hr_ve2 <- lm(ve_L ~ hr + I(hr^2), data = hxd)
+summary(lm_hr_ve2)
+fit_m2 <- glance(lm_hr_ve2)
+hxd$lm2_fitted <- predict(lm_hr_ve2)
+
+ggplot(hxd, aes(x = hr, y = ve_L)) + 
+   geom_point(size = 1, alpha = 0.05) + 
+   geom_line(aes(y = lm2_fitted), size = 1, colour = "red") +
+   xlab("Cycling Intensity (bpm)") + 
+   ylab("Breathing Volume (L/minute)")
+```
+
+### Simple linear regression for hr and Ve with VE cubed
+
+```{r}
+lm_hr_ve3 <- lm(ve_L ~ hr + I(hr^2) + I(hr^3), data = hxd)
+summary(lm_hr_ve3)
+fit_m3 <- glance(lm_hr_ve3)
+hxd$lm3_fitted <- predict(lm_hr_ve3)
+
+ggplot(hxd, aes(x = hr, y = ve_L)) + 
+   geom_point(size = 1, alpha = 0.05) + 
+   geom_line(aes(y = lm3_fitted), size = 1, colour = "red") +
+   xlab("Cycling Intensity (bpm)") + 
+   ylab("Breathing Volume (L/minute)")
+```
+
+### Linear regression for hr and Ve with VE squared plus gender
+
+```{r}
+lm_hr_ve4 <- lm(ve_L ~ hr + I(hr^2) + sex, data = hxd)
+summary(lm_hr_ve4)
+fit_m4 <- glance(lm_hr_ve4)
+
+hxd$lm4_fitted <- predict(lm_hr_ve4, newdata = hxd, level = 0)
+
+ggplot(hxd, aes(x = hr, y = ve_L, color = sex) ) +
+     geom_point(size = 1, alpha = 0.05) + 
+     geom_line(data = hxd, aes(y = lm4_fitted), size = 1) +
+      xlab("Cycling Intensity (bpm)") + 
+      ylab("Breathing Volume (L/minute)")
+```
+
+### Linear regression for hr and Ve with VE squared plus gender plus city 
+
+```{r}
+lm_hr_ve5 <- lm(ve_L ~ hr + I(hr^2) + sex + city, data = hxd)
+summary(lm_hr_ve5)
+fit_m5 <- glance(lm_hr_ve5)
+
+hxd$lm5_fitted <- predict(lm_hr_ve5, newdata = hxd, level = 0)
+
+ggplot(hxd, aes(x = hr, y = ve_L, color = city) ) +
+     geom_point(size = 1, alpha = 0.05) + 
+     geom_line(data = hxd, aes(y = lm5_fitted), size = 1) +
+      xlab("Cycling Intensity (bpm)") + 
+      ylab("Breathing Volume (L/minute)")
+```
+
+### Getting fit statistics for each model 
+
+```{r}
+fitstats <- rbind(fit_m1, fit_m2, fit_m3, fit_m4, fit_m5)
+fitstats
+```
+
+
+```{r}
+city_regressions <- hxd %>% 
+                     group_by(city) %>% 
+                     do(tidy(lm(ve_L ~ hr + I(hr^2), .)))
+city_regressions
+```
+

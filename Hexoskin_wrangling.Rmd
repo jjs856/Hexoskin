@@ -1,0 +1,181 @@
+---
+title: "Hexoskin"
+author: "Jonathan Slaney"
+date: "03/10/2019"
+output: html_document
+---
+
+## Necessary packages
+
+```{r}
+library(knitr)
+library(tidyverse)
+library(tidymodels)
+library(ggmap)
+library(lubridate)
+library(readr)
+library(psych)
+library(ggpubr)
+library(ggpmisc)
+library(effsize)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Looping over data and creating city and participant columns
+
+```{r}
+hexodata_temp <- NULL
+
+hexodata_temp <- dir(path = "/Users/dfuller/Desktop/DatasetsHexoskin/raw", full.names = TRUE, pattern = "*.csv", recursive = TRUE) %>%
+   purrr::map(function(i){
+     dfhx <- read.csv(i, header = TRUE)
+     dfhx$city <- stringr::str_sub(i, 45, 48)
+     dfhx$participants <- stringr::str_sub(i, 62, 63)
+     hexodata_temp <- bind_rows(hexodata_temp, dfhx)
+   })
+
+hexo_data_temp <- bind_rows(hexodata_temp)
+
+glimpse(hexo_data_temp)
+
+table(hexo_data_temp$participants)
+```
+
+### Change column names, create hexo_data and write to csv
+
+```{r}
+hexo_data <- hexo_data_temp %>%
+  dplyr::rename(
+     time = time..s.256., 
+     respiratory_rate = breathing_rate..rpm...api.datatype.33.., 
+     heart_rate = heart_rate..bpm...api.datatype.19.., 
+     minute_ventilation_ml = minute_ventilation..mL.min...api.datatype.36.., 
+     cadence = cadence..spm...api.datatype.53.., 
+     activity_g = activity..g...api.datatype.49..,
+     minute_ventilation_l = minute_ventilation..L.min...api.datatype.36..
+  )
+```
+
+### Delete useless columns
+
+```{r}
+hexo_data <- subset(hexo_data, select = -sleep_position..NA...api.datatype.270..)
+hexo_data <- subset(hexo_data, select = -X)
+hexo_data <- subset(hexo_data, select = -time)
+```
+
+### Ventilation for Lyon
+
+Previous analysis showed that ventilation for Lyon was missing for some reason. Suspicion is that only L was stored and ml for some reason. Check that suspicion now. 
+
+```{r}
+city_vent_na <- hexo_data %>%
+          group_by(city, participants) %>%
+            summarize(
+                vent_ml = mean(minute_ventilation_ml),
+                vent_L = mean(minute_ventilation_l)
+                )
+print(city_vent_na)
+
+city_vent <- hexo_data %>%
+          group_by(city, participants) %>%
+            summarize(
+                vent_ml = mean(minute_ventilation_ml, na.rm = TRUE),
+                vent_L = mean(minute_ventilation_l, na.rm = TRUE)
+                )
+print(city_vent)
+```
+
+Yes. Looks like Lyon was only stored as a L and not mL. Also, the litres for Lyon are not litres. They look more like ml. I'm going to assume that everything is ml and check back on this later. 
+
+### Fixing ventilation for Lyon 
+```{r}
+hexo_data <- hexo_data %>% 
+              replace_na(list(minute_ventilation_ml = 0, 
+                              minute_ventilation_l = 0)
+                         )
+
+hexo_data$minute_ventilation_ml_city <- hexo_data$minute_ventilation_ml + hexo_data$minute_ventilation_l
+
+city_vent_test <- hexo_data %>%
+          group_by(city, participants) %>%
+            summarize(
+                vent_ml_true = mean(minute_ventilation_ml_city, na.rm = TRUE),
+                vent_ml_false = mean(minute_ventilation_ml_city, na.rm = FALSE)
+                )
+city_vent_test 
+
+hexo_data$minute_ventilation_l_city <- hexo_data$minute_ventilation_ml_city/1000
+```
+
+### Add participant individual level data
+
+```{r}
+table(hexo_data$participants)
+
+participants <- read_csv("/Users/dfuller/Desktop/DatasetsHexoskin/Hexoskin_participants.csv")
+
+table(participants$participants)
+
+hexo_data_complete <- inner_join(hexo_data, participants, by = "participants")
+
+write.csv(hexo_data_complete, "hexo_data.csv") ## Saving so that I do not break my computer when working on this data! 
+```
+
+SP is present in the participant data but not in the HexoSkin data. Need to check to confirm that is correct. 
+
+### Make new minute level variable (minute) in hexo_data_complete
+
+```{r}
+hexo_data_complete$a <- ymd_hm(hexo_data_complete$DATETIME) # Produces NA when format is not "%m/%d/%Y"
+hexo_data_complete$b <- ymd_hms(hexo_data_complete$DATETIME) # Produces NA when format is not "%d.%m.%Y"
+hexo_data_complete$a[is.na(hexo_data_complete$a)] <- hexo_data_complete$b[!is.na(hexo_data_complete$b)] # Combine both while keeping their ranks
+
+#hexo_data_complete$newDATETIME <- ymd_hms(hexo_data_complete$DATETIME)
+hexo_data_complete$minute <- floor_date(hexo_data_complete$a, "minute")
+```
+
+### Group by minute
+
+```{r}
+hxd <- hexo_data_complete %>%
+                  group_by(participants, minute) %>% 
+                    summarize(
+                      rr = mean(respiratory_rate, na.rm = TRUE),
+                      hr = mean(heart_rate, na.rm = TRUE),
+                      ve_L = mean((minute_ventilation_l_city), na.rm = TRUE), 
+                      g = sum(activity_g, na.rm = TRUE),
+                      age = first(age),
+                      city = first(city), 
+                      height = first(height_cm), 
+                      mass = first(mass_kg), 
+                      sex = first(gender)
+                    )
+```
+
+### Complete Cases
+
+```{r}
+hxd <- hxd %>% drop_na()
+```
+
+1 case removed to due to missing data. 
+
+### Descriptives (for heart rate, breathing) psych package describe function
+
+```{r}
+describe(hxd$hr)
+
+ggplot(hxd, aes(hr)) + 
+    geom_histogram()
+```
+
+Removing HR values less than 50 as they are implausible for this type of analysis
+```{r}
+hxd <- subset(hxd, hr >= 50)
+
+write_csv(hxd, "hexo_data_analysis.csv")
+```
