@@ -29,7 +29,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 hexodata_temp <- NULL
 
-hexodata_temp <- dir(path = "/Users/dfuller/Desktop/DatasetsHexoskin/raw", full.names = TRUE, pattern = "*.csv", recursive = TRUE) %>%
+hexodata_temp <- dir(path = "~/Graduate Studies/Hexoskin/DatasetsHexoskin", full.names = TRUE, pattern = "*.csv", recursive = TRUE) %>%
    purrr::map(function(i){
      dfhx <- read.csv(i, header = TRUE)
      dfhx$city <- stringr::str_sub(i, 45, 48)
@@ -180,7 +180,19 @@ hxd <- subset(hxd, hr >= 50)
 write_csv(hxd, "hexo_data_analysis.csv")
 ```
 
+Max HR by participant
+
+```{r}
+hexodata <- group_by(
+  describe.by(hexodata$hr))
+```
+
+
 Jobs
 Find maximum recorded heart rate for each participant
 calc max for each participant
+
+Make more changes
+
+
 
