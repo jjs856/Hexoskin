@@ -137,4 +137,58 @@ cor_hexo_full <- ggplot(hxd, aes(x = hr, y = ve_L)) +
 plot(cor_hexo_full)
 ```
 
-Sending to Git
+Find heart rates
+
+```{r}
+max_hr <- hxd %>%
+  group_by(participants) %>%
+  summarise(
+         maxhr = max(hr),
+  )
+```
+
+Make max HR col, convert to percent O2, make VO% relative as absolute value, bind
+
+```{r}
+hxd_VO <- NULL
+hxd_VO$percentmaxhr <- NULL
+
+hxd_VO <- hxd %>%
+   mutate(
+     hxd$hrmax <- max(hxd$hr),
+     hxd_VO$percentmaxhr <- ((hr/hrmax)*100),
+     hxd_VO$VO <- ((percentmaxhr-37.182)/0.6483),
+     hxd_VO <- bind_rows(hxd, hxd_VO)
+   )
+
+hexo_data <- bind_rows(hxd_VO)
+```
+
+
+Categorize VO by METs
+
+```{r}
+
+MET <- hxd_VO %>%
+  mutate(METs = case_when(
+  VO <= 3.5 ~ "1", 
+  VO > 3.6 & VO < 7.0 ~ "2",
+  VO > 7.1 & VO < 10.5 ~ "3",
+  VO > 10.6 & VO < 14.0 ~ "4",
+  VO > 14.1 & VO < 17.5 ~ "5",
+  VO > 17.6 & VO < 21.0 ~ "6",
+  VO > 21.1 & VO < 24.5 ~ "7", 
+  VO > 24.6 & VO < 28.0 ~ "8", 
+  VO > 28.1 & VO < 31.5 ~ "9", 
+  VO > 31.6 & VO < 35.0 ~ "10", 
+  VO > 35.1 & VO < 38.5 ~ "11", 
+  VO > 38.6 & VO < 42.0 ~ "12", 
+  VO > 42.1 & VO < 45.5 ~ "13", 
+  VO > 45.6 & VO < 49.0 ~ "14", 
+  VO >= 49.1 ~ "15"
+  ))
+
+```
+
+
+
