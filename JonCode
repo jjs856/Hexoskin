@@ -146,24 +146,29 @@ max_hr <- hxd %>%
          maxhr = max(hr),
   )
 ```
-
 Make max HR col, convert to percent O2, make VO% relative as absolute value, bind
+TO DO 220-age and age/gender
+Add DOB column
 
 ```{r}
-hxd_VO <- NULL
-hxd_VO$percentmaxhr <- NULL
 
 hxd_VO <- hxd %>%
+  group_by(participants) %>%
+    mutate(
+      hrmax = max(hr))
+
+#na.omit(hxd_VO$hrmax)
+#hxd_VO$percentmaxhr <- NULL
+hxd_VO <- hxd_VO %>%
    mutate(
-     hxd$hrmax <- max(hxd$hr),
-     hxd_VO$percentmaxhr <- ((hr/hrmax)*100),
-     hxd_VO$VO <- ((percentmaxhr-37.182)/0.6483),
-     hxd_VO <- bind_rows(hxd, hxd_VO)
+     age = 2018 - dob,
+     percentmaxhr = ((hr/hrmax)*100),
+     VO = ((percentmaxhr-37.182)/0.6483),
+     hr_max_220 = (220 - age)
    )
 
 hexo_data <- bind_rows(hxd_VO)
 ```
-
 
 Categorize VO by METs
 
@@ -171,24 +176,36 @@ Categorize VO by METs
 
 MET <- hxd_VO %>%
   mutate(METs = case_when(
-  VO <= 3.5 ~ "1", 
-  VO > 3.6 & VO < 7.0 ~ "2",
-  VO > 7.1 & VO < 10.5 ~ "3",
-  VO > 10.6 & VO < 14.0 ~ "4",
-  VO > 14.1 & VO < 17.5 ~ "5",
-  VO > 17.6 & VO < 21.0 ~ "6",
-  VO > 21.1 & VO < 24.5 ~ "7", 
-  VO > 24.6 & VO < 28.0 ~ "8", 
-  VO > 28.1 & VO < 31.5 ~ "9", 
-  VO > 31.6 & VO < 35.0 ~ "10", 
-  VO > 35.1 & VO < 38.5 ~ "11", 
-  VO > 38.6 & VO < 42.0 ~ "12", 
-  VO > 42.1 & VO < 45.5 ~ "13", 
-  VO > 45.6 & VO < 49.0 ~ "14", 
-  VO >= 49.1 ~ "15"
+  VO <= 3.5 ~ 1, 
+  VO > 3.50000001 & VO < 7 ~ 2,
+  VO > 7.00000001 & VO < 10.5 ~ 3,
+  VO > 10.500000001 & VO < 14.0 ~ 4,
+  VO > 14.000000001 & VO < 17.5 ~ 5,
+  VO > 17.500000001 & VO < 21.0 ~ 6,
+  VO > 21.000000001 & VO < 24.5 ~ 7, 
+  VO > 24.500000001 & VO < 28.0 ~ 8, 
+  VO > 28.000000001 & VO < 31.5 ~ 9, 
+  VO > 31.500000001 & VO < 35.0 ~ 10, 
+  VO > 35.000000001 & VO < 38.5 ~ 11, 
+  VO > 38.500000001 & VO < 42.0 ~ 12, 
+  VO > 42.000000001 & VO < 45.5 ~ 13, 
+  VO > 45.500000001 & VO < 49.0 ~ 14, 
+  VO > 49.000000001 & VO < 52.5 ~ 15,
+  VO > 52.500000001 & VO < 56.0 ~ 16,
+  VO > 56.000000001 & VO < 59.5 ~ 17,
+  VO > 59.500000001 & VO < 63.0 ~ 18,
+  VO > 63.000000001 & VO < 66.5 ~ 19, 
+  VO > 66.500000001 & VO < 70.0 ~ 20,
+  VO > 70.000000001 & VO < 73.5 ~ 21, 
+  VO > 73.500000001 & VO < 77.0 ~ 22,
+  VO > 77.000000001 & VO < 80.5 ~ 23,
+  VO > 80.500000001 & VO < 84.0 ~ 24, 
+  VO > 84.000000001 & VO < 87.5 ~ 25, 
+  VO >= 87.50000001 ~ 26
   ))
 
 ```
 
-
-
+```{r}
+describe(MET$METs)
+```
