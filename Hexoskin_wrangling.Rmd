@@ -29,6 +29,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 hexodata_temp <- NULL
 
+#/Users/dfuller/Desktop/DatasetsHexoskin/
+
 hexodata_temp <- dir(path = "~/Graduate Studies/Hexoskin/DatasetsHexoskin", full.names = TRUE, pattern = "*.csv", recursive = TRUE) %>%
    purrr::map(function(i){
      dfhx <- read.csv(i, header = TRUE)
@@ -106,7 +108,7 @@ city_vent_test <- hexo_data %>%
                 vent_ml_true = mean(minute_ventilation_ml_city, na.rm = TRUE),
                 vent_ml_false = mean(minute_ventilation_ml_city, na.rm = FALSE)
                 )
-city_vent_test 
+city_vent_test
 
 hexo_data$minute_ventilation_l_city <- hexo_data$minute_ventilation_ml_city/1000
 ```
@@ -116,11 +118,16 @@ hexo_data$minute_ventilation_l_city <- hexo_data$minute_ventilation_ml_city/1000
 ```{r}
 table(hexo_data$participants)
 
-participants <- read_csv("/Users/dfuller/Desktop/DatasetsHexoskin/Hexoskin_participants.csv")
+#participants <- read_csv("/Users/dfuller/Desktop/DatasetsHexoskin/Hexoskin_participants.csv")
+participants <- read_csv("~/Graduate Studies/Hexoskin/Hexoskin_participants.csv")
+#table(participants$participants)
+#hexo_data_complete <- inner_join(hexo_data, participants, by = "participants")
 
-table(participants$participants)
+participants <- read_csv("~/Graduate Studies/Hexoskin/Hexoskin_participants.csv")
 
 hexo_data_complete <- inner_join(hexo_data, participants, by = "participants")
+
+write.csv(hexo_data_complete, "hexo_data.csv")
 
 write.csv(hexo_data_complete, "hexo_data.csv") ## Saving so that I do not break my computer when working on this data! 
 ```
@@ -189,11 +196,56 @@ hexodata_vo2 <- hexodata %>%
 ```
 
 
-Jobs
-Find maximum recorded heart rate for each participant
-calc max for each participant
+```{r}
+max_hr <- hxd %>%
+  group_by(participants) %>%
+  summarise(
+         maxhr = max(hr),
+  )
+```
 
-Make more changes
+Make max HR col, convert to percent O2, make VO% relative as absolute value, bind
+
+```{r}
+hxd_VO <- NULL
+hxd_VO$percentmaxhr <- NULL
+
+hxd_VO <- hxd %>%
+   mutate(
+     hxd$hrmax <- max(hxd$hr),
+     hxd_VO$percentmaxhr <- ((hr/hrmax)*100),
+     hxd_VO$VO <- ((percentmaxhr-37.182)/0.6483),
+     hxd_VO <- bind_rows(hxd, hxd_VO)
+   )
+
+hexo_data <- bind_rows(hxd_VO)
+```
+
+Categorize VO by METs
+
+```{r}
+
+MET <- hxd_VO %>%
+  mutate(METs = case_when(
+  VO <= 3.5 ~ "1", 
+  VO > 3.6 & VO < 7.0 ~ "2",
+  VO > 7.1 & VO < 10.5 ~ "3",
+  VO > 10.6 & VO < 14.0 ~ "4",
+  VO > 14.1 & VO < 17.5 ~ "5",
+  VO > 17.6 & VO < 21.0 ~ "6",
+  VO > 21.1 & VO < 24.5 ~ "7", 
+  VO > 24.6 & VO < 28.0 ~ "8", 
+  VO > 28.1 & VO < 31.5 ~ "9", 
+  VO > 31.6 & VO < 35.0 ~ "10", 
+  VO > 35.1 & VO < 38.5 ~ "11", 
+  VO > 38.6 & VO < 42.0 ~ "12", 
+  VO > 42.1 & VO < 45.5 ~ "13", 
+  VO > 45.6 & VO < 49.0 ~ "14", 
+  VO >= 49.1 ~ "15"
+  ))
+
+```
+
 
 
 
