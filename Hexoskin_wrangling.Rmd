@@ -2,10 +2,16 @@
 title: "Hexoskin"
 author: "Jonathan Slaney"
 date: "03/10/2019"
-output: html_document
+output: 
+  html_document: 
+    keep_md: true
 ---
 
-## Necessary packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Necessary packages
 
 ```{r}
 library(knitr)
@@ -20,34 +26,26 @@ library(ggpmisc)
 library(effsize)
 ```
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ### Looping over data and creating city and participant columns
 
 ```{r}
 hexodata_temp <- NULL
 
-hexodata_temp <- dir(path = "~/Graduate Studies/Hexoskin/DatasetsHexoskin", full.names = TRUE, pattern = "*.csv", recursive = TRUE) %>%
+hexodata_temp <- dir(path = "C:/Users/jslan/Documents/Graduate Studies/Hexoskin/DatasetsHexoskin/", full.names = TRUE, pattern = "*.csv", recursive = TRUE) %>%
    purrr::map(function(i){
      dfhx <- read.csv(i, header = TRUE)
-     dfhx$city <- stringr::str_sub(i, 45, 48)
-     dfhx$participants <- stringr::str_sub(i, 62, 63)
+     dfhx$city <- stringr::str_sub(i, 70, 73)
+     dfhx$participants <- stringr::str_sub(i, 87, 88)
      hexodata_temp <- bind_rows(hexodata_temp, dfhx)
    })
 
-hexo_data_temp <- bind_rows(hexodata_temp)
-
-glimpse(hexo_data_temp)
-
-table(hexo_data_temp$participants)
+hexo_data <- bind_rows(hexodata_temp)
 ```
 
 ### Change column names, create hexo_data and write to csv
 
 ```{r}
-hexo_data <- hexo_data_temp %>%
+hexo_data <- hexo_data %>%
   dplyr::rename(
      time = time..s.256., 
      respiratory_rate = breathing_rate..rpm...api.datatype.33.., 
@@ -87,9 +85,9 @@ city_vent <- hexo_data %>%
                 vent_L = mean(minute_ventilation_l, na.rm = TRUE)
                 )
 print(city_vent)
-```
 
-Yes. Looks like Lyon was only stored as a L and not mL. Also, the litres for Lyon are not litres. They look more like ml. I'm going to assume that everything is ml and check back on this later. 
+### Add participant individual level data
+``` 
 
 ### Fixing ventilation for Lyon 
 ```{r}
@@ -111,21 +109,16 @@ city_vent_test
 hexo_data$minute_ventilation_l_city <- hexo_data$minute_ventilation_ml_city/1000
 ```
 
-### Add participant individual level data
-
 ```{r}
-table(hexo_data$participants)
-
-participants <- read_csv("/Users/dfuller/Desktop/DatasetsHexoskin/Hexoskin_participants.csv")
-
-table(participants$participants)
-
+participants <- read_csv("C:/Users/jslan/Documents/Graduate Studies/Hexoskin/Hexoskin_participants.csv")
+participants <- participants %>%
+  dplyr::rename(
+     participants = participant_code
+  )
 hexo_data_complete <- inner_join(hexo_data, participants, by = "participants")
 
 write.csv(hexo_data_complete, "hexo_data.csv") ## Saving so that I do not break my computer when working on this data! 
 ```
-
-SP is present in the participant data but not in the HexoSkin data. Need to check to confirm that is correct. 
 
 ### Make new minute level variable (minute) in hexo_data_complete
 
@@ -146,14 +139,17 @@ hxd <- hexo_data_complete %>%
                     summarize(
                       rr = mean(respiratory_rate, na.rm = TRUE),
                       hr = mean(heart_rate, na.rm = TRUE),
-                      ve_L = mean((minute_ventilation_l_city), na.rm = TRUE), 
+                      ve = mean(minute_ventilation_l_city, na.rm = TRUE), 
                       g = sum(activity_g, na.rm = TRUE),
-                      age = first(age),
+                      dob = first(dob),
+                      age = 2018 - dob,
                       city = first(city), 
                       height = first(height_cm), 
                       mass = first(mass_kg), 
-                      sex = first(gender)
+                      sex = first(sex)
                     )
+
+hxd$ve_L <- hxd$ve/1000
 ```
 
 ### Complete Cases
@@ -162,18 +158,74 @@ hxd <- hexo_data_complete %>%
 hxd <- hxd %>% drop_na()
 ```
 
-1 case removed to due to missing data. 
-
 ### Descriptives (for heart rate, breathing) psych package describe function
 
 ```{r}
 describe(hxd$hr)
-
-ggplot(hxd, aes(hr)) + 
-    geom_histogram()
 ```
 
+### Describe ve
+
+```{r}
+describe(hxd$ve_L)
+```
+
+
+### Descriptives for Participants and Cities
+
+```{r}
+table(hxd$participants)
+
+table(hxd$city)
+
+table(hxd$city, hxd$participants)
+```
+
+### Histograms by city 
+
+```{r}
+ggplot(hxd, aes(ve)) +
+  geom_histogram(aes(y = ..density..), fill = "cornflowerblue", colour = "black", size = 0.4) +
+  geom_density(aes(y = ..density..), colour = "darkred", size = 1) + 
+  ylab("HR density") + 
+  xlab("Heart rate (bpm)") + 
+   ggtitle("HR by city") + 
+   facet_wrap(~ city)
+```
+
+### Histograms by city for Ve
+
+```{r}
+ggplot(hxd, aes(ve_L)) +
+  geom_histogram(aes(y = ..density..), fill = "cornflowerblue", colour = "black", size = 0.4) +
+  geom_density(aes(y = ..density..), colour = "darkred", size = 1) + 
+  ylab("Density") + 
+  xlab("Ve (L/min)") + 
+   ggtitle("Ve by city") + 
+   facet_wrap(~ city)
+```
+
+### Histogram of all data
+
+```{r}
+ggplot(hxd, aes(ve)) +
+  geom_histogram(aes(y = ..density..), fill = "cornflowerblue", colour = "black", size = 0.4) +
+  geom_density(aes(y = ..density..), colour = "darkred", size = 1) + 
+  ylab("Ve density") + 
+  xlab("Ve (L/min)")
+```
+
+### Boxplots by city
+
+### Linear regressions by participant
+
+### scatterplot for predictor and outcome
+
+### Calculate R^2
+
+
 Removing HR values less than 50 as they are implausible for this type of analysis
+
 ```{r}
 hxd <- subset(hxd, hr >= 50)
 
@@ -183,18 +235,129 @@ write_csv(hxd, "hexo_data_analysis.csv")
 Max HR by participant
 
 ```{r}
-hexodata_vo2 <- hexodata %>%
+hxd_vo2 <- hxd %>%
   group_by(participants)
-  describe.by(hexodata$hr)
+  describe.by(hxd$hr)
 ```
 
+Find heart rates
 
-Jobs
-Find maximum recorded heart rate for each participant
-calc max for each participant
+```{r}
+max_hr <- hxd %>%
+  group_by(participants) %>%
+  summarise(
+         maxhr = max(hr)
+  )
+view(max_hr)
+```
 
-Make more changes
+Make max HR col, convert to percent O2, make VO% relative as absolute value, bind
+TO DO 220-age and age/gender
+Add DOB column
 
+```{r}
 
+hxd_VO <- hxd %>%
+  group_by(participants) %>%
+    mutate(
+      hrmax = max(hr))
 
+#na.omit(hxd_VO$hrmax)
+#hxd_VO$percentmaxhr <- NULL
+hxd_VO <- hxd_VO %>%
+   mutate(
+     age = 2018 - dob,
+     percentmaxhr = ((hr/hrmax)*100),
+     VO = ((percentmaxhr-37.182)/0.6483),
+     hr_max_220 = (220 - age)
+   )
 
+hexo_data <- bind_rows(hxd_VO)
+```
+
+Categorize VO by METs
+
+```{r}
+
+MET <- hxd_VO %>%
+  mutate(METs = case_when(
+  VO <= 3.5 ~ 1, 
+  VO > 3.50000001 & VO < 7 ~ 2,
+  VO > 7.00000001 & VO < 10.5 ~ 3,
+  VO > 10.500000001 & VO < 14.0 ~ 4,
+  VO > 14.000000001 & VO < 17.5 ~ 5,
+  VO > 17.500000001 & VO < 21.0 ~ 6,
+  VO > 21.000000001 & VO < 24.5 ~ 7, 
+  VO > 24.500000001 & VO < 28.0 ~ 8, 
+  VO > 28.000000001 & VO < 31.5 ~ 9, 
+  VO > 31.500000001 & VO < 35.0 ~ 10, 
+  VO > 35.000000001 & VO < 38.5 ~ 11, 
+  VO > 38.500000001 & VO < 42.0 ~ 12, 
+  VO > 42.000000001 & VO < 45.5 ~ 13, 
+  VO > 45.500000001 & VO < 49.0 ~ 14, 
+  VO > 49.000000001 & VO < 52.5 ~ 15,
+  VO > 52.500000001 & VO < 56.0 ~ 16,
+  VO > 56.000000001 & VO < 59.5 ~ 17,
+  VO > 59.500000001 & VO < 63.0 ~ 18,
+  VO > 63.000000001 & VO < 66.5 ~ 19, 
+  VO > 66.500000001 & VO < 70.0 ~ 20,
+  VO > 70.000000001 & VO < 73.5 ~ 21, 
+  VO > 73.500000001 & VO < 77.0 ~ 22,
+  VO > 77.000000001 & VO < 80.5 ~ 23,
+  VO > 80.500000001 & VO < 84.0 ~ 24, 
+  VO > 84.000000001 & VO < 87.5 ~ 25, 
+  VO >= 87.50000001 ~ 26
+  ))
+
+```
+
+```{r}
+describe(MET$METs)
+```
+
+MET histos
+
+### scatterplot for predictor and outcome
+
+```{r}
+cor_bar <- ggplot(MET, aes(x = METs, y = ve_L)) + 
+                  geom_point(size = 0.05) + 
+  geom_smooth(method='lm', formula = y ~ x) + 
+  ylab("MInute Ventilation") + 
+  xlab("Metabolic Equivelents of Task") + 
+  ggtitle("Cycle commuting intensity vs Ventilation") +
+  facet_wrap(~ city)
+plot(cor_bar)
+```
+
+### Histogram of all data
+
+```{r}
+ggplot(MET, aes(METs)) +
+  geom_histogram(aes(y = ..density..), fill = "cornflowerblue", colour = "black", size = 0.5) +
+  geom_density(aes(y = ..density..), colour = "darkred", size = 0.8) + 
+  ylab("MET density") + 
+  xlab("METs")
+```
+
+Then go to Analysis line 119 and do regressions with MET
+
+### Fit linear regression to participants
+
+```{r}
+cor_hexo_all <- ggplot(hxd, aes(x = hr, y = ve_L)) + 
+                  geom_point(size = 0.1) + 
+   geom_smooth(method='lm', formula = y ~ x) + 
+   facet_wrap(~ participants)
+plot(cor_hexo_all)
+```
+
+### Fit linear regression to all data
+Do these in the analaysis file
+
+```{r}
+cor_hexo_full <- ggplot(hxd, aes(x = hr, y = ve_L)) + 
+                  geom_point(size = 0.1) + 
+    geom_smooth(method='glm', formula = y ~ x)
+plot(cor_hexo_full)
+```
