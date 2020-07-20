@@ -2,7 +2,9 @@
 title: "Hexoskin"
 author: "Jonathan Slaney"
 date: "03/10/2019"
-output: html_document
+output: 
+   html_document: 
+      keep_md: true
 ---
 
 ## Necessary packages
@@ -27,7 +29,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ### Looping over data and creating city and participant columns
 
 ```{r}
-hxd <- read_csv("/Users/dfuller/Desktop/DatasetsHexoskin/hexo_data_analysis.csv")
+hxd <- read_csv("~/Graduate Studies/Hexoskin/DatasetsHexoskin")
 
 ### Descriptives (for heart rate, breathing) psych package describe function
 ```
@@ -59,12 +61,12 @@ table(hxd$city, hxd$participants)
 ### Histograms by city 
 
 ```{r}
-ggplot(hxd, aes(hr)) +
+ggplot(hxd, aes(ve)) +
   geom_histogram(aes(y = ..density..), fill = "cornflowerblue", colour = "black", size = 0.4) +
   geom_density(aes(y = ..density..), colour = "darkred", size = 1) + 
-  ylab("HR density") + 
-  xlab("Heart rate (bpm)") + 
-   ggtitle("HR by city") + 
+  ylab("Ve density") + 
+  xlab("Ve (L/min)") + 
+   ggtitle("Ve by city") + 
    facet_wrap(~ city)
 ```
 
@@ -118,7 +120,7 @@ Here VJ is strange. Appears to have two distinct lines. Might indicates that thi
 
 ### Fit linear regression to all data
 
-### Simple linear regression for hr and Ve
+### Simple linear regression for hr and Ve (1)
 
 ```{r}
 lm_hr_ve <- lm(ve_L ~ hr, data = hxd)
@@ -133,7 +135,7 @@ ggplot(hxd, aes(x = hr, y = ve_L)) +
    ylab("Breathing Volume (L/minute)")
 ```
 
-### Simple linear regression for hr and Ve with VE squared
+### Simple linear regression for hr and Ve with VE squared (2)
 
 ```{r}
 lm_hr_ve2 <- lm(ve_L ~ hr + I(hr^2), data = hxd)
@@ -148,7 +150,7 @@ ggplot(hxd, aes(x = hr, y = ve_L)) +
    ylab("Breathing Volume (L/minute)")
 ```
 
-### Simple linear regression for hr and Ve with VE cubed
+### Simple linear regression for hr and Ve with VE cubed (3)
 
 ```{r}
 lm_hr_ve3 <- lm(ve_L ~ hr + I(hr^2) + I(hr^3), data = hxd)
@@ -163,7 +165,7 @@ ggplot(hxd, aes(x = hr, y = ve_L)) +
    ylab("Breathing Volume (L/minute)")
 ```
 
-### Linear regression for hr and Ve with VE squared plus gender
+### Linear regression for hr and Ve with VE squared plus gender (4)
 
 ```{r}
 lm_hr_ve4 <- lm(ve_L ~ hr + I(hr^2) + sex, data = hxd)
@@ -179,7 +181,7 @@ ggplot(hxd, aes(x = hr, y = ve_L, color = sex) ) +
       ylab("Breathing Volume (L/minute)")
 ```
 
-### Linear regression for hr and Ve with VE squared plus gender plus city 
+### Linear regression for hr and Ve with VE squared plus gender plus city (5)
 
 ```{r}
 lm_hr_ve5 <- lm(ve_L ~ hr + I(hr^2) + sex + city, data = hxd)
@@ -195,24 +197,24 @@ ggplot(hxd, aes(x = hr, y = ve_L, color = city) ) +
       ylab("Breathing Volume (L/minute)")
 ```
 
-### Getting fit statistics for each model 
+### Getting fit statistics for each model
 
 ```{r}
 fitstats <- rbind(fit_m1, fit_m2, fit_m3, fit_m4, fit_m5)
 fitstats
 ```
 
-
 ```{r}
 city_regressions <- hxd %>% 
                      group_by(city) %>% 
                      do(tidy(lm(ve_L ~ hr + I(hr^2), .)))
 city_regressions
+
 ```
 
 ## Regressions using MET outcome variable
 
-### Simple linear regression for MET and Ve
+### Simple linear regression for MET and Ve (1)
 
 ```{r}
 lm_hr_ve <- lm(ve_L ~ METs, data = MET)
@@ -227,7 +229,7 @@ ggplot(MET, aes(x = METs, y = ve_L)) +
    ylab("Breathing Volume (L/minute)")
 ```
 
-### Simple linear regression for MET and Ve with MET squared
+### Simple linear regression for MET and Ve with MET squared (2)
 
 ```{r}
 lm_hr_ve2 <- lm(ve_L ~ METs + I(METs^2), data = MET)
@@ -242,7 +244,7 @@ ggplot(MET, aes(x = METs, y = ve_L)) +
    ylab("Breathing Volume (L/minute)")
 ```
 
-### Simple linear regression for MET and Ve with MET cubed
+### Simple linear regression for MET and Ve with MET cubed (3)
 
 ```{r}
 lm_hr_ve3 <- lm(ve_L ~ METs + I(METs^2) + I(METs^3), data = MET)
@@ -267,7 +269,7 @@ ggplot(MET, aes(x = METs, y = ve_L)) +
    ylab("Breathing Volume (L/minute)")
 ```
 
-### Linear regression for MET and Ve with MET squared plus gender
+### Linear regression for MET and Ve with MET squared plus gender (4)
 
 ```{r}
 lm_hr_ve4 <- lm(ve_L ~ METs + I(METs^2) + sex, data = MET)
@@ -283,7 +285,7 @@ ggplot(MET, aes(x = METs, y = ve_L, color = sex) ) +
       ylab("Breathing Volume (L/minute)")
 ```
 
-### Linear regression for MET and Ve with MET squared plus gender plus city 
+### Linear regression for MET and Ve with MET squared plus gender plus city (5)
 
 ```{r}
 lm_hr_ve5 <- lm(ve_L ~ METs + I(METs^2) + sex + city, data = MET)
@@ -294,7 +296,7 @@ MET$lm5_fitted <- predict(lm_hr_ve5, newdata = MET, level = 0)
 
 ggplot(MET, aes(x = METs, y = ve_L, color = city)) +
      geom_point(size = 1, alpha = 0.05) + 
-     geom_line(data = metric_vec_template(), aes(y = lm5_fitted), size = 1) +
+     geom_line(data = MET, aes(y = lm5_fitted), size = 1) +
       xlab("MET") + 
       ylab("Breathing Volume (L/minute)")
 ```
@@ -311,4 +313,21 @@ city_regressions <- MET %>%
                      group_by(city) %>% 
                      do(tidy(lm(ve_L ~ METs + I(METs^2), .)))
 city_regressions
+```
+
+MET reg
+
+### Simple linear regression for hr and Ve with VE squared
+
+```{r}
+lm_MET_ve2 <- lm(ve_L ~ METs + I(METs^2), data = MET)
+summary(lm_MET_ve2)
+fit_m2 <- glance(lm_MET_ve2)
+MET$lm2_fitted <- predict(lm_MET_ve2)
+
+ggplot(MET, aes(x = METs, y = ve_L)) + 
+   geom_point(size = 1, alpha = 0.05) + 
+   geom_line(aes(y = lm2_fitted), size = 1, colour = "red") +
+   xlab("METs") + 
+   ylab("Breathing Volume (L/minute)")
 ```
