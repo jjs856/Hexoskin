@@ -357,3 +357,56 @@ ggplot(MET, aes(x = METs, y = ve_L)) +
    xlab("METs") + 
    ylab("Breathing Volume (L/minute)")
 ```
+## GAM using Ve_L and MET
+## Add tinymodels
+```{r}
+mod_lm <- gam(ve_L ~ METs, data = MET)
+summary(mod_lm)
+```
+
+### GAM using ve_L, MET and city
+
+```{r}
+mod_lmc <- gam(ve_L ~ METs + city, data = MET)
+summary(mod_lmc)
+```
+
+### GAM using ve_L, MET, City and Sex
+
+```{r}
+mod_lm <- gam(ve_L ~ METs + city + sex, data = MET)
+summary(mod_lm)
+```
+
+## GAMM using Ve_L and MET
+# I tried many ways to do this. It seems to want a random effect. City doesn't work
+```{r}
+mod_mm <- gamm(ve_L ~ METs + sex + city, family = gaussian(), data = MET)
+summary(mod_mm)
+```
+### Calculate rmse for models 1 to 5
+## Add "Metrics" package
+### Calculate RMSE 1
+```{r}
+rmse(MET$ve_L, predict(lm_hr_ve, data.frame(MET)))
+```
+
+### Calculate RMSE 2
+```{r}
+rmse(MET$ve_L, predict(lm_hr_ve2, data.frame(MET)))
+```
+
+### Calculate RMSE 3
+```{r}
+rmse(MET$ve_L, predict(lm_hr_ve3, data.frame(MET)))
+```
+
+### Calculate RMSE 4
+```{r}
+rmse(MET$ve_L, predict(lm_hr_ve4, data.frame(MET)))
+```
+
+### Calculate RMSE lm5
+```{r}
+rmse(MET$ve_L, predict(lm_hr_ve5, data.frame(MET)))
+```
