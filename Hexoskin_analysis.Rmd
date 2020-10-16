@@ -379,6 +379,13 @@ mod_lm <- gam(ve_L ~ METs + city + sex, data = MET)
 summary(mod_lm)
 ```
 
+## GAM using ve, MET, city, age, sex, mass
+
+```{r}
+mod_lmcsa <- gam(ve_L ~ METs + city + sex + age + mass, data = MET)
+summary(mod_lmcsa)
+```
+
 ## GAMM using Ve_L and MET
 # I tried many ways to do this. It seems to want a random effect. City doesn't work
 ```{r}
