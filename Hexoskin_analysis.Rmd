@@ -21,6 +21,7 @@ library(ggpubr)
 library(ggpmisc)
 library(effsize)
 library(tidymodels)
+library(Metrics)
 ```
 
 ```{r setup, include=FALSE}
