@@ -2,7 +2,9 @@
 title: "Hexoskin"
 author: "Jonathan Slaney"
 date: "03/10/2019"
-output: html_document
+output: 
+   html_document: 
+      keep_md: true
 ---
 
 ## Necessary packages
@@ -18,6 +20,7 @@ library(psych)
 library(ggpubr)
 library(ggpmisc)
 library(effsize)
+library(tidymodels)
 ```
 
 ```{r setup, include=FALSE}
@@ -30,6 +33,31 @@ knitr::opts_chunk$set(echo = TRUE)
 hxd <- read_csv("~/Graduate Studies/Hexoskin/DatasetsHexoskin")
 
 ### Descriptives (for heart rate, breathing) psych package describe function
+```
+
+Reading analysis data from "Hexoskin_wrangling.Rmd"
+
+```{r}
+setwd("C:/Users/jslan/Documents/Graduate Studies/Hexoskin")
+hxd <- read_csv("hexo_data_analysis.csv")
+```
+
+
+Recoding city names
+
+```{r}
+hxd <- hxd %>%
+  mutate(city = case_when(
+  city == "Auckl" ~ "Auckland", 
+  city == "Chris" ~ "Christchurch", 
+  city == "Copen" ~ "Copenhagen", 
+  city == "Delhi" ~ "Delhi", 
+  city == "Lyon1" ~ "Lyon",
+  city == "Montr" ~ "Montreal", 
+  city == "Paris" ~ "Paris")
+  )
+
+table(hxd$city)
 ```
 
 ```{r}
